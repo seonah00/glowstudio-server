@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import analyzeRouter from './routes/analyze'
+import creatorsRouter from './routes/creators'
 
 dotenv.config()
 
@@ -19,5 +20,6 @@ app.use(express.json())
 
 app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date() }))
 app.use('/analyze', analyzeRouter)
+app.use('/creators', creatorsRouter)
 
 app.listen(PORT, () => console.log(`GlowStudio Server running on :${PORT}`))
