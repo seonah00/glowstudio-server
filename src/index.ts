@@ -14,6 +14,7 @@ app.use(cors({
     'http://localhost:5173',
     'https://glowstudio-web.vercel.app',
     /\.vercel\.app$/,
+    /\.railway\.app$/,
   ],
 }))
 app.use(express.json())
