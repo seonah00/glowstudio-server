@@ -3,9 +3,32 @@ import axios from 'axios'
 const APIFY_TOKEN = process.env.APIFY_API_KEY!
 
 const CATEGORY_HASHTAGS: Record<string, string[]> = {
-  beauty: ['kbeauty', 'koreanskincare', 'glassskin', 'grwm', 'skintok'],
-  lifestyle: ['koreanlifestyle', 'morningroutine', 'dayinmylife', 'koreandaily'],
-  vlog: ['seoulvlog', 'koreadvlog', 'studyvlog', 'koreanvlog'],
+  beauty: ['kbeauty', 'koreanskincare', 'glassskin', 'skincareroutine', 'koreanmakeup'],
+  lifestyle: ['koreanlifestyle', 'koreandailylife', 'seoullife', 'koreatravel', 'livinginkorea'],
+  vlog: ['koreadvlog', 'seoulvlog', 'koreanvlog', 'koreadailylife', 'seoulkoreadvlog'],
+}
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  beauty: ['beauty', 'skin', 'makeup', 'skincare', 'korean', 'kbeauty', 'glow', 'routine', 'cosmetic', 'serum'],
+  lifestyle: ['lifestyle', 'life', 'daily', 'routine', 'wellness', 'korea', 'living', 'vlog'],
+  vlog: ['vlog', 'daily', 'korea', 'seoul', 'life', 'travel', 'living', 'day'],
+}
+
+const GENERIC_TAGS = new Set(['#fyp', '#fy', '#foryou', '#foryoupage', '#viral', '#trending'])
+
+function isRelevant(creator: Creator, category: string): boolean {
+  const keywords = CATEGORY_KEYWORDS[category] || []
+  const creatorText = [
+    ...creator.keywords,
+    creator.bio,
+    creator.displayName,
+  ].join(' ').toLowerCase()
+  return keywords.some(k => creatorText.includes(k))
+}
+
+function hasOnlyGenericTags(creator: Creator): boolean {
+  if (creator.keywords.length === 0) return false
+  return creator.keywords.every(k => GENERIC_TAGS.has(k))
 }
 
 interface RawTikTokItem {
@@ -145,7 +168,18 @@ export async function fetchCreatorsByCategory(
     return b.avgViews - a.avgViews
   })
 
-  return creators.slice(0, limit)
+  // 카테고리 관련 키워드 필터링
+  const filtered = creators.filter(c => isRelevant(c, category))
+  console.log(`[creators] 전체: ${creators.length}개, 필터 후: ${filtered.length}개`)
+
+  // 필터 결과가 5개 미만이면 fallback: 범용 태그만 있는 계정 제외 후 팔로워순
+  if (filtered.length < 5) {
+    const fallback = creators.filter(c => !hasOnlyGenericTags(c))
+    console.log(`[creators] fallback 사용: ${fallback.length}개`)
+    return fallback.slice(0, limit)
+  }
+
+  return filtered.slice(0, limit)
 }
 
 function formatCount(n: number): string {
